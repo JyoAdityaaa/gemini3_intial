@@ -1,0 +1,140 @@
+{
+  "name": "Advanced Architecture Reasoning Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "analyze-architecture",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 200]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "systemPrompt": "You are a Normalizer. Extract system details from the raw webhook input and structure them into a crisp engineering specification. Keep it technical.",
+        "prompt": "={{ $json.body }}"
+      },
+      "id": "node-normalizer",
+      "name": "Normalizer",
+      "type": "n8n-nodes-base.openai",
+      "typeVersion": 1,
+      "position": [200, 200]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "systemPrompt": "You are a FinOps Agent. Focus EXCLUSIVELY on cost optimization, egress fees, and right-sizing. Identify over-provisioning.",
+        "prompt": "={{ $node[\"Normalizer\"].json.choices[0].message.content }}"
+      },
+      "id": "node-cost",
+      "name": "Cost Agent",
+      "type": "n8n-nodes-base.openai",
+      "typeVersion": 1,
+      "position": [450, 0]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "systemPrompt": "You are a Security Agent (CISO). Focus EXCLUSIVELY on vulnerabilities, IAM least-privilege, and network exposure. Identify attack vectors.",
+        "prompt": "={{ $node[\"Normalizer\"].json.choices[0].message.content }}"
+      },
+      "id": "node-security",
+      "name": "Security Agent",
+      "type": "n8n-nodes-base.openai",
+      "typeVersion": 1,
+      "position": [450, 200]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "systemPrompt": "You are a Reliability Agent (SRE). Focus EXCLUSIVELY on SPOFs, high availability, Multi-AZ strategies, and disaster recovery.",
+        "prompt": "={{ $node[\"Normalizer\"].json.choices[0].message.content }}"
+      },
+      "id": "node-reliability",
+      "name": "Reliability Agent",
+      "type": "n8n-nodes-base.openai",
+      "typeVersion": 1,
+      "position": [450, 400]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "node-merge",
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [700, 200]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "systemPrompt": "You are a Debate Agent. Review the findings from Cost, Security, and Reliability. Identify where their advice conflicts (e.g., Security wants costly isolation, FinOps wants shared resources). Facilitate a 'clash' of ideas.",
+        "prompt": "=Cost Findings: {{ $node[\"Cost Agent\"].json.choices[0].message.content }}\nSecurity Findings: {{ $node[\"Security Agent\"].json.choices[0].message.content }}\nReliability Findings: {{ $node[\"Reliability Agent\"].json.choices[0].message.content }}"
+      },
+      "id": "node-debate",
+      "name": "Debate Agent",
+      "type": "n8n-nodes-base.openai",
+      "typeVersion": 1,
+      "position": [900, 200]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "systemPrompt": "You are a Rule-Based Resolver. Apply standard Well-Architected Framework principles to resolve the agent debate. Prioritize Security > Reliability > Cost unless specifically instructed otherwise by the user constraints.",
+        "prompt": "={{ $json.choices[0].message.content }}"
+      },
+      "id": "node-resolver",
+      "name": "Rule-Based Resolver",
+      "type": "n8n-nodes-base.openai",
+      "typeVersion": 1,
+      "position": [1100, 200]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "systemPrompt": "You are the Final Synthesizer. Output a JSON object that matches the application's AnalysisResult schema. Include a mermaidDiagram and a markdownReport based on the resolved architecture.",
+        "prompt": "={{ $json.choices[0].message.content }}"
+      },
+      "id": "node-synthesizer",
+      "name": "Final Synthesizer",
+      "type": "n8n-nodes-base.openai",
+      "typeVersion": 1,
+      "position": [1300, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.choices[0].message.content }}",
+        "options": {}
+      },
+      "id": "node-respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1500, 200]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Normalizer", "type": "main", "index": 0 }]] },
+    "Normalizer": { "main": [[
+      { "node": "Cost Agent", "type": "main", "index": 0 },
+      { "node": "Security Agent", "type": "main", "index": 0 },
+      { "node": "Reliability Agent", "type": "main", "index": 0 }
+    ]] },
+    "Cost Agent": { "main": [[{ "node": "Merge Results", "type": "main", "index": 0 }]] },
+    "Security Agent": { "main": [[{ "node": "Merge Results", "type": "main", "index": 1 }]] },
+    "Reliability Agent": { "main": [[{ "node": "Merge Results", "type": "main", "index": 2 }]] },
+    "Merge Results": { "main": [[{ "node": "Debate Agent", "type": "main", "index": 0 }]] },
+    "Debate Agent": { "main": [[{ "node": "Rule-Based Resolver", "type": "main", "index": 0 }]] },
+    "Rule-Based Resolver": { "main": [[{ "node": "Final Synthesizer", "type": "main", "index": 0 }]] },
+    "Final Synthesizer": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  }
+}

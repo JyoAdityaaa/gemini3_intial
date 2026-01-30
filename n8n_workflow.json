@@ -1,0 +1,73 @@
+{
+  "name": "Architecture Reasoning Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "analyze-architecture",
+        "options": {}
+      },
+      "id": "54e7d7f7-3e0f-4b0c-99f5-7c3d9a1b2c3d",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "prompt": "={{ $json.body }}",
+        "systemPrompt": "You are a Consensus Engine for 5 senior architecture agents (FinOps, Performance, Reliability, Security, Solutions Architect).\n\nAnalyze the architecture description provided in the webhook body.\n\nOutput a JSON object matching this schema:\n{\n  \"riskScore\": number,\n  \"monthlyCost\": \"string\",\n  \"bottlenecks\": [\"string\"],\n  \"spof\": [\"string\"],\n  \"securityRisks\": [\"string\"],\n  \"scalabilityLimits\": [\"string\"],\n  \"suggestedImprovements\": [\"string\"],\n  \"agentData\": [\n    {\n      \"agentName\": \"string\",\n      \"findings\": [\"string\"],\n      \"warnings\": [\"string\"],\n      \"reasoning\": \"string\"\n    }\n  ],\n  \"mermaidDiagram\": \"string (Valid Mermaid.js graph code)\",\n  \"markdownReport\": \"string (Detailed markdown report)\"\n}\n\nEnsure a 'debate' occurs internally where Security checks FinOps' cost-saving measures, and SRE checks performance goals. Return ONLY the JSON.",
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "id": "a8a7-4b0c-99f5-7c3d9a1b2c3d",
+      "name": "AI Agent / LLM",
+      "type": "n8n-nodes-base.openai",
+      "typeVersion": 1,
+      "position": [500, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.choices[0].message.content }}",
+        "options": {}
+      },
+      "id": "b9c8-4b0c-99f5-7c3d9a1b2c3d",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [750, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent / LLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent / LLM": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

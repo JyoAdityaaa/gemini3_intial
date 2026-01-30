@@ -1,0 +1,7 @@
+{
+  "name": "Diagram-to-Decision — AI Architecture Reasoning Engine",
+  "description": "Professional engineering review tool that uses multi-agent AI to analyze cloud architecture diagrams for cost, risk, and scalability.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
